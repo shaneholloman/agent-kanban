@@ -1,52 +1,64 @@
-import { type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { useParams } from "@tanstack/react-router";
 import WorkspacesUnavailablePage from "@remote/pages/WorkspacesUnavailablePage";
-import { useResolvedRelayWorkspaceHostId } from "@remote/shared/hooks/useResolvedRelayWorkspaceHostId";
-import { RemoteUserSystemProvider } from "@remote/app/providers/RemoteUserSystemProvider";
-import { WorkspaceProvider } from "@/shared/providers/WorkspaceProvider";
-import { ExecutionProcessesProvider } from "@/shared/providers/ExecutionProcessesProvider";
-import { LogsPanelProvider } from "@/shared/providers/LogsPanelProvider";
-import { ActionsProvider } from "@/shared/providers/ActionsProvider";
-import { TerminalProvider } from "@/shared/providers/TerminalProvider";
+import { useRelayWorkspaceHostHealth } from "@remote/shared/hooks/useRelayWorkspaceHostHealth";
 import { useWorkspaceContext } from "@/shared/hooks/useWorkspaceContext";
+import { useMobileWorkspaceTitle } from "@remote/shared/stores/useMobileWorkspaceTitle";
 
 interface RemoteWorkspacesPageShellProps {
   children: ReactNode;
 }
 
-function ExecutionProcessesProviderWrapper({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const { selectedSessionId } = useWorkspaceContext();
+function WorkspaceTitleSync() {
+  const { workspace } = useWorkspaceContext();
+  const setTitle = useMobileWorkspaceTitle((s) => s.setTitle);
 
-  return (
-    <ExecutionProcessesProvider sessionId={selectedSessionId}>
-      {children}
-    </ExecutionProcessesProvider>
-  );
+  useEffect(() => {
+    setTitle(workspace?.name ?? workspace?.branch ?? null);
+    return () => setTitle(null);
+  }, [workspace?.name, workspace?.branch, setTitle]);
+
+  return null;
 }
 
 export function RemoteWorkspacesPageShell({
   children,
 }: RemoteWorkspacesPageShellProps) {
-  const resolvedHostId = useResolvedRelayWorkspaceHostId();
+  const { hostId } = useParams({ strict: false });
+  const hostHealth = useRelayWorkspaceHostHealth(hostId ?? null);
 
-  if (!resolvedHostId) {
+  if (!hostId) {
     return <WorkspacesUnavailablePage />;
   }
 
+  if (hostHealth.isChecking) {
+    return (
+      <WorkspacesUnavailablePage
+        blockedHost={{
+          id: hostId,
+          name: null,
+        }}
+        isCheckingBlockedHost
+      />
+    );
+  }
+
+  if (hostHealth.isError) {
+    return (
+      <WorkspacesUnavailablePage
+        blockedHost={{
+          id: hostId,
+          name: null,
+          errorMessage: hostHealth.errorMessage,
+        }}
+      />
+    );
+  }
+
   return (
-    <RemoteUserSystemProvider>
-      <WorkspaceProvider>
-        <ExecutionProcessesProviderWrapper>
-          <TerminalProvider>
-            <LogsPanelProvider>
-              <ActionsProvider>{children}</ActionsProvider>
-            </LogsPanelProvider>
-          </TerminalProvider>
-        </ExecutionProcessesProviderWrapper>
-      </WorkspaceProvider>
-    </RemoteUserSystemProvider>
+    <>
+      <WorkspaceTitleSync />
+      {children}
+    </>
   );
 }

@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
 import {
@@ -47,7 +46,6 @@ import {
   useWorkspacePanelState,
   RIGHT_MAIN_PANEL_MODES,
 } from '@/shared/stores/useUiPreferencesStore';
-import { toWorkspace } from '@/shared/lib/routes/navigation';
 import { useInspectModeStore } from '../model/store/useInspectModeStore';
 import { Actions } from '@/shared/actions';
 import {
@@ -61,6 +59,7 @@ import { SettingsDialog } from '@/shared/dialogs/settings/SettingsDialog';
 import { useActionVisibilityContext } from '@/shared/hooks/useActionVisibilityContext';
 import { PrCommentsDialog } from '@/shared/dialogs/tasks/PrCommentsDialog';
 import type { NormalizedComment } from '@vibe/ui/components/pr-comment-node';
+import { useAppNavigation } from '@/shared/hooks/useAppNavigation';
 
 /** Compute execution status from boolean flags */
 function computeExecutionStatus(params: {
@@ -161,7 +160,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
   const sessionId = session?.id;
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const appNavigation = useAppNavigation();
 
   const { executeAction } = useActions();
   const actionCtx = useActionVisibilityContext();
@@ -178,8 +177,8 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
 
   const handleOpenWorkspace = useCallback(() => {
     if (!workspaceId) return;
-    navigate(toWorkspace(workspaceId));
-  }, [navigate, workspaceId]);
+    appNavigation.goToWorkspace(workspaceId);
+  }, [appNavigation, workspaceId]);
 
   // Get entries early to extract pending approval for scratch key
   const { entries } = useEntries();
@@ -395,7 +394,7 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
   ]);
 
   const { uploadFiles, localImages, clearUploadedImages } =
-    useSessionAttachments(workspaceId, handleInsertMarkdown);
+    useSessionAttachments(workspaceId, sessionId, handleInsertMarkdown);
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
@@ -486,7 +485,6 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
       if (!isSlashCommand) {
         reviewContext?.clearComments();
       }
-      onScrollToBottom();
     }
   }, [
     send,
@@ -498,7 +496,6 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
     isNewSessionMode,
     clearDraft,
     reviewContext,
-    onScrollToBottom,
   ]);
 
   // Track previous process count for queue refresh
@@ -865,19 +862,21 @@ export function SessionChatBoxContainer(props: SessionChatBoxContainerProps) {
         className="min-h-double max-h-[50vh] overflow-y-auto"
         repoIds={repoIds}
         executor={executor}
+        sessionId={sessionId}
         autoFocus
         onPasteFiles={onPasteFiles}
         localImages={localImages}
         sendShortcut={config?.send_message_shortcut}
       />
     ),
-    [config?.send_message_shortcut]
+    [config?.send_message_shortcut, sessionId]
   );
 
   const modelSelectorNode = effectiveExecutor ? (
     <ModelSelectorContainer
       agent={effectiveExecutor}
       workspaceId={workspaceId}
+      sessionId={sessionId}
       onAdvancedSettings={handleCustomise}
       presets={variantOptions}
       selectedPreset={selectedVariant}

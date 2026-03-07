@@ -1,20 +1,16 @@
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { cloneDeep, isEqual, merge } from 'lodash';
-import { SignInIcon, SpinnerIcon } from '@phosphor-icons/react';
-import { OAuthDialog } from '@/shared/dialogs/global/OAuthDialog';
 import {
-  UserSystemContext,
-  type UserSystemContextType,
-} from '@/shared/hooks/useUserSystem';
+  CheckIcon,
+  CopyIcon,
+  SignInIcon,
+  SpinnerIcon,
+} from '@phosphor-icons/react';
+import { OAuthDialog } from '@/shared/dialogs/global/OAuthDialog';
+import { useAppRuntime } from '@/shared/hooks/useAppRuntime';
+import { useUserSystem } from '@/shared/hooks/useUserSystem';
 import { useAuth } from '@/shared/hooks/auth/useAuth';
 import { relayApi } from '@/shared/lib/api';
 import { normalizeEnrollmentCode } from '@/shared/lib/relayPake';
@@ -28,6 +24,8 @@ import {
 import {
   SettingsCard,
   SettingsCheckbox,
+  SettingsField,
+  SettingsInput,
   SettingsSaveBar,
   SettingsSelect,
 } from './SettingsComponents';
@@ -53,22 +51,19 @@ export function RelaySettingsSectionContent({
 }: {
   initialState?: RelaySettingsSectionInitialState;
 }) {
-  const userSystem = useContext(UserSystemContext);
+  const runtime = useAppRuntime();
 
-  if (userSystem) {
-    return <LocalRelaySettingsSectionContent userSystem={userSystem} />;
+  if (runtime === 'local') {
+    return <LocalRelaySettingsSectionContent />;
   }
 
   return <RemoteRelaySettingsSectionContent initialState={initialState} />;
 }
 
-function LocalRelaySettingsSectionContent({
-  userSystem,
-}: {
-  userSystem: UserSystemContextType;
-}) {
+function LocalRelaySettingsSectionContent() {
   const { t } = useTranslation(['settings', 'common']);
   const { setDirty: setContextDirty } = useSettingsDirty();
+  const userSystem = useUserSystem();
   const { config, loading, updateAndSaveConfig } = userSystem;
   const { isSignedIn } = useAuth();
   const queryClient = useQueryClient();
@@ -83,6 +78,7 @@ function LocalRelaySettingsSectionContent({
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
   const [enrollmentError, setEnrollmentError] = useState<string | null>(null);
   const [removingClientId, setRemovingClientId] = useState<string | null>(null);
+  const [enrollmentCodeCopied, setEnrollmentCodeCopied] = useState(false);
 
   const {
     data: pairedClients = [],
@@ -244,6 +240,27 @@ function LocalRelaySettingsSectionContent({
 
         {draft?.relay_enabled && (
           <div className="space-y-3 mt-2">
+            <SettingsField
+              label={t('settings.relay.hostName.label', 'Host name')}
+              description={t(
+                'settings.relay.hostName.helper',
+                'Shown when pairing from browser. Leave blank to use the default format.'
+              )}
+            >
+              <SettingsInput
+                value={draft.relay_host_name ?? ''}
+                onChange={(value) =>
+                  updateDraft({
+                    relay_host_name: value === '' ? null : value,
+                  })
+                }
+                placeholder={t(
+                  'settings.relay.hostName.placeholder',
+                  '<os_type> host (<user_id>)'
+                )}
+              />
+            </SettingsField>
+
             {isSignedIn ? (
               <>
                 {!enrollmentCode && (
@@ -265,8 +282,32 @@ function LocalRelaySettingsSectionContent({
                     <label className="text-sm font-medium text-normal">
                       {t('settings.relay.enrollmentCode.label')}
                     </label>
-                    <div className="bg-secondary border border-border rounded-sm px-base py-half font-mono text-lg text-high tracking-widest select-all">
+                    <div className="relative bg-secondary border border-border rounded-sm px-base py-half font-mono text-lg text-high tracking-widest select-all pr-10">
                       {enrollmentCode}
+                      <button
+                        onClick={() => {
+                          void navigator.clipboard.writeText(enrollmentCode);
+                          setEnrollmentCodeCopied(true);
+                          setTimeout(
+                            () => setEnrollmentCodeCopied(false),
+                            2000
+                          );
+                        }}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-low hover:text-normal transition-colors rounded-sm"
+                        aria-label={t(
+                          'settings.relay.enrollmentCode.copy',
+                          'Copy code'
+                        )}
+                      >
+                        {enrollmentCodeCopied ? (
+                          <CheckIcon
+                            className="size-icon-sm text-success"
+                            weight="bold"
+                          />
+                        ) : (
+                          <CopyIcon className="size-icon-sm" weight="bold" />
+                        )}
+                      </button>
                     </div>
                     <p className="text-sm text-low">
                       {t('settings.relay.enrollmentCode.helper')}

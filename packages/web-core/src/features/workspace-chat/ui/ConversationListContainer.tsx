@@ -1,5 +1,6 @@
 import {
   DataWithScrollModifier,
+  type ListScrollLocation,
   ScrollModifier,
   VirtuosoMessageList,
   VirtuosoMessageListLicense,
@@ -15,6 +16,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { SpinnerIcon } from '@phosphor-icons/react';
 
 import { cn } from '@/shared/lib/utils';
 import {
@@ -22,7 +24,7 @@ import {
   InitialDataScrollModifier,
   ScrollToBottomModifier,
 } from '@/shared/lib/virtuoso-modifiers';
-import NewDisplayConversationEntry from './NewDisplayConversationEntry';
+import DisplayConversationEntry from './DisplayConversationEntry';
 import { ApprovalFormProvider } from '@/shared/hooks/ApprovalForm';
 import { useEntries } from '../model/contexts/EntriesContext';
 import {
@@ -49,6 +51,7 @@ import { ScriptFixerDialog } from '@/shared/dialogs/scripts/ScriptFixerDialog';
 
 interface ConversationListProps {
   attempt: WorkspaceWithSession;
+  onAtBottomChange?: (atBottom: boolean) => void;
 }
 
 export interface ConversationListHandle {
@@ -88,7 +91,7 @@ const ItemContent: VirtuosoMessageListProps<
   // Handle aggregated tool groups (file_read, search, web_fetch)
   if (isAggregatedGroup(data)) {
     return (
-      <NewDisplayConversationEntry
+      <DisplayConversationEntry
         expansionKey={data.patchKey}
         aggregatedGroup={data}
         aggregatedDiffGroup={null}
@@ -104,7 +107,7 @@ const ItemContent: VirtuosoMessageListProps<
   // Handle aggregated diff groups (file_edit by same path)
   if (isAggregatedDiffGroup(data)) {
     return (
-      <NewDisplayConversationEntry
+      <DisplayConversationEntry
         expansionKey={data.patchKey}
         aggregatedGroup={null}
         aggregatedDiffGroup={data}
@@ -120,7 +123,7 @@ const ItemContent: VirtuosoMessageListProps<
   // Handle aggregated thinking groups (thinking entries in previous turns)
   if (isAggregatedThinkingGroup(data)) {
     return (
-      <NewDisplayConversationEntry
+      <DisplayConversationEntry
         expansionKey={data.patchKey}
         aggregatedGroup={null}
         aggregatedDiffGroup={null}
@@ -141,7 +144,7 @@ const ItemContent: VirtuosoMessageListProps<
   }
   if (data.type === 'NORMALIZED_ENTRY' && attempt) {
     return (
-      <NewDisplayConversationEntry
+      <DisplayConversationEntry
         expansionKey={data.patchKey}
         entry={data.content}
         aggregatedGroup={null}
@@ -170,7 +173,7 @@ const itemIdentity: VirtuosoMessageListProps<
 export const ConversationList = forwardRef<
   ConversationListHandle,
   ConversationListProps
->(function ConversationList({ attempt }, ref) {
+>(function ConversationList({ attempt, onAtBottomChange }, ref) {
   const resetAction = useResetProcess();
   const [channelData, setChannelData] =
     useState<DataWithScrollModifier<DisplayEntry> | null>(null);
@@ -182,6 +185,17 @@ export const ConversationList = forwardRef<
     loading: boolean;
   } | null>(null);
   const debounceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const lastAtBottomRef = useRef(true);
+  const handleScroll = useCallback(
+    (location: ListScrollLocation) => {
+      if (location.isAtBottom !== lastAtBottomRef.current) {
+        lastAtBottomRef.current = location.isAtBottom;
+        onAtBottomChange?.(location.isAtBottom);
+      }
+    },
+    [onAtBottomChange]
+  );
 
   // Get repos from workspace context to check if scripts are configured
   let repos: RepoWithTargetBranch[] = [];
@@ -389,10 +403,15 @@ export const ConversationList = forwardRef<
     <ApprovalFormProvider>
       <div
         className={cn(
-          'h-full transition-opacity duration-300',
+          'virtuoso-license-wrapper relative h-full overflow-hidden transition-opacity duration-300',
           hasContent ? 'opacity-100' : 'opacity-0'
         )}
       >
+        {!hasContent && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <SpinnerIcon className="size-6 animate-spin text-low" />
+          </div>
+        )}
         <VirtuosoMessageListLicense
           licenseKey={import.meta.env.VITE_PUBLIC_REACT_VIRTUOSO_LICENSE_KEY}
         >
@@ -405,6 +424,7 @@ export const ConversationList = forwardRef<
             computeItemKey={computeItemKey}
             itemIdentity={itemIdentity}
             ItemContent={ItemContent}
+            onScroll={handleScroll}
             Header={({ context }) => (
               <div className="pt-2">
                 {context?.showSetupPlaceholder && (

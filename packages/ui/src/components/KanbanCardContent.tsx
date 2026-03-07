@@ -128,6 +128,7 @@ export type KanbanCardContentProps<TTag extends KanbanTag = KanbanTag> = {
   onAssigneeClick?: (e: MouseEvent) => void;
   onMoreActionsClick?: () => void;
   tagEditProps?: TagEditProps<TTag>;
+  isMobile?: boolean;
 };
 
 export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
@@ -146,6 +147,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
   onAssigneeClick,
   onMoreActionsClick,
   tagEditProps,
+  isMobile,
 }: KanbanCardContentProps<TTag>) {
   const { t } = useTranslation('common');
   const previewDescription = useMemo(() => {
@@ -210,9 +212,12 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
               e.stopPropagation();
               onMoreActionsClick();
             }}
+            onMouseDown={(e) => e.stopPropagation()}
             className={cn(
               'p-half -m-half rounded-sm text-low hover:text-normal hover:bg-secondary shrink-0',
-              'invisible opacity-0 group-hover:visible group-hover:opacity-100',
+              isMobile
+                ? ''
+                : 'invisible opacity-0 group-hover:visible group-hover:opacity-100',
               'transition-[opacity,color,background-color]'
             )}
             aria-label="More actions"
@@ -228,18 +233,26 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
 
       {/* Row 3: Description (optional, truncated) */}
       {previewDescription && (
-        <p className="text-sm text-low m-0 leading-relaxed line-clamp-4">
+        <p
+          className={cn(
+            'text-sm text-low m-0',
+            isMobile
+              ? 'leading-tight line-clamp-2'
+              : 'leading-relaxed line-clamp-4'
+          )}
+        >
           {previewDescription}
         </p>
       )}
 
-      {/* Row 4: Priority, Tags, Assignee */}
+      {/* Row 4: Priority + Assignee */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-half flex-wrap flex-1 min-w-0">
+        <div className="flex items-center gap-half min-w-0">
           {onPriorityClick ? (
             <button
               type="button"
               onClick={onPriorityClick}
+              onMouseDown={(e) => e.stopPropagation()}
               className="flex items-center cursor-pointer hover:bg-secondary rounded-sm transition-colors"
             >
               <PriorityIcon priority={priority} />
@@ -253,6 +266,27 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
           ) : (
             <PriorityIcon priority={priority} />
           )}
+        </div>
+        {onAssigneeClick ? (
+          <button
+            type="button"
+            onClick={onAssigneeClick}
+            onMouseDown={(e) => e.stopPropagation()}
+            className="cursor-pointer hover:bg-secondary rounded-sm transition-colors"
+          >
+            <KanbanAssignee assignees={assignees} />
+          </button>
+        ) : (
+          <KanbanAssignee assignees={assignees} />
+        )}
+      </div>
+
+      {/* Row 5: Tags, PRs, Relationships (own row to prevent overflow) */}
+      {(tags.length > 0 ||
+        tagEditProps ||
+        pullRequests.length > 0 ||
+        relationships.length > 0) && (
+        <div className="flex items-center gap-half flex-wrap min-w-0">
           {tagEditProps ? (
             (tagEditProps.renderTagEditor?.({
               allTags: tagEditProps.allTags,
@@ -296,18 +330,7 @@ export function KanbanCardContent<TTag extends KanbanTag = KanbanTag>({
             </span>
           )}
         </div>
-        {onAssigneeClick ? (
-          <button
-            type="button"
-            onClick={onAssigneeClick}
-            className="cursor-pointer hover:bg-secondary rounded-sm transition-colors"
-          >
-            <KanbanAssignee assignees={assignees} />
-          </button>
-        ) : (
-          <KanbanAssignee assignees={assignees} />
-        )}
-      </div>
+      )}
     </div>
   );
 }

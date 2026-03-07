@@ -14,6 +14,28 @@ export type RightMainPanelMode =
 
 export type LayoutMode = 'workspaces' | 'kanban' | 'migrate';
 
+export type MobileTab =
+  | 'workspaces'
+  | 'chat'
+  | 'changes'
+  | 'logs'
+  | 'preview'
+  | 'git';
+
+export type MobileFontScale = 'default' | 'small' | 'smaller';
+
+const MOBILE_FONT_SCALE_KEY = 'vk-mobile-font-scale';
+
+const loadMobileFontScale = (): MobileFontScale => {
+  try {
+    const stored = localStorage.getItem(MOBILE_FONT_SCALE_KEY);
+    if (stored === 'small' || stored === 'smaller') return stored;
+  } catch {
+    // localStorage may be unavailable
+  }
+  return 'default';
+};
+
 export type KanbanViewMode = 'kanban' | 'list';
 
 export type ContextBarPosition =
@@ -291,7 +313,7 @@ type State = {
   isTerminalVisible: boolean;
   previewRefreshKey: number;
   // Note: Kanban issue panel state (selectedKanbanIssueId, createMode, etc.)
-  // is now derived from URL via useKanbanNavigation hook
+  // is derived from URL via app navigation route state
 
   // Workspace-specific panel state
   workspacePanelStates: Record<string, WorkspacePanelState>;
@@ -313,6 +335,16 @@ type State = {
   kanbanViewMode: KanbanViewMode;
   listViewStatusFilter: string | null;
 
+  // Mobile tab state
+  mobileActiveTab: MobileTab;
+
+  // Mobile font scale
+  mobileFontScale: MobileFontScale;
+
+  // Last selected organization and project (persisted via scratch store)
+  selectedOrgId: string | null;
+  selectedProjectId: string | null;
+
   // UI preferences actions
   setRepoAction: (repoId: string, action: RepoAction) => void;
   setExpanded: (key: string, value: boolean) => void;
@@ -332,7 +364,7 @@ type State = {
   toggleTerminal: () => void;
   setTerminalVisible: (value: boolean) => void;
   // Note: Kanban panel actions (openKanbanIssuePanel, closeKanbanIssuePanel, etc.)
-  // are now handled by navigation via useKanbanNavigation hook
+  // are handled by app navigation
   toggleRightMainPanelMode: (
     mode: RightMainPanelMode,
     workspaceId?: string
@@ -384,6 +416,17 @@ type State = {
   // Kanban view mode actions
   setKanbanViewMode: (mode: KanbanViewMode) => void;
   setListViewStatusFilter: (statusId: string | null) => void;
+
+  // Mobile tab actions
+  setMobileActiveTab: (tab: MobileTab) => void;
+
+  // Mobile font scale actions
+  setMobileFontScale: (scale: MobileFontScale) => void;
+
+  // Last selected organization and project actions
+  setSelectedOrgId: (orgId: string | null) => void;
+  clearSelectedOrgId: () => void;
+  setSelectedProjectId: (projectId: string | null) => void;
 };
 
 export const useUiPreferencesStore = create<State>()((set, get) => ({
@@ -416,6 +459,16 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
   // Kanban view mode state
   kanbanViewMode: 'kanban' as KanbanViewMode,
   listViewStatusFilter: null,
+
+  // Mobile tab state
+  mobileActiveTab: 'chat' as MobileTab,
+
+  // Mobile font scale
+  mobileFontScale: loadMobileFontScale(),
+
+  // Last selected organization and project
+  selectedOrgId: null,
+  selectedProjectId: null,
 
   // UI preferences actions
   setRepoAction: (repoId, action) =>
@@ -484,6 +537,7 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
     const wsState =
       state.workspacePanelStates[workspaceId] ?? DEFAULT_WORKSPACE_PANEL_STATE;
     const isCurrentlyActive = wsState.rightMainPanelMode === mode;
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
 
     set({
       workspacePanelStates: {
@@ -498,6 +552,8 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
         : isWideScreen()
           ? state.isLeftSidebarVisible
           : false,
+      ...(isMobile &&
+        !isCurrentlyActive && { mobileActiveTab: mode as MobileTab }),
     });
   },
 
@@ -506,6 +562,7 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
     const state = get();
     const wsState =
       state.workspacePanelStates[workspaceId] ?? DEFAULT_WORKSPACE_PANEL_STATE;
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
     set({
       workspacePanelStates: {
         ...state.workspacePanelStates,
@@ -519,6 +576,7 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
           ? state.isLeftSidebarVisible
           : false,
       }),
+      ...(isMobile && mode !== null && { mobileActiveTab: mode as MobileTab }),
     });
   },
 
@@ -717,6 +775,28 @@ export const useUiPreferencesStore = create<State>()((set, get) => ({
 
   setListViewStatusFilter: (statusId) =>
     set({ listViewStatusFilter: statusId }),
+
+  // Mobile tab actions
+  setMobileActiveTab: (tab) => set({ mobileActiveTab: tab }),
+
+  // Mobile font scale actions
+  setMobileFontScale: (scale) => {
+    try {
+      if (scale === 'default') {
+        localStorage.removeItem(MOBILE_FONT_SCALE_KEY);
+      } else {
+        localStorage.setItem(MOBILE_FONT_SCALE_KEY, scale);
+      }
+    } catch {
+      // localStorage may be unavailable
+    }
+    set({ mobileFontScale: scale });
+  },
+
+  // Last selected organization and project actions
+  setSelectedOrgId: (orgId) => set({ selectedOrgId: orgId }),
+  clearSelectedOrgId: () => set({ selectedOrgId: null }),
+  setSelectedProjectId: (projectId) => set({ selectedProjectId: projectId }),
 }));
 
 // Hook for repo action preference
@@ -795,6 +875,20 @@ export function usePersistedCollapsedPaths(
   );
 
   return [pathSet, setPathSet];
+}
+
+// Hook for mobile active tab
+export function useMobileActiveTab() {
+  const tab = useUiPreferencesStore((s) => s.mobileActiveTab);
+  const set = useUiPreferencesStore((s) => s.setMobileActiveTab);
+  return [tab, set] as const;
+}
+
+// Hook for mobile font scale
+export function useMobileFontScale() {
+  const scale = useUiPreferencesStore((s) => s.mobileFontScale);
+  const set = useUiPreferencesStore((s) => s.setMobileFontScale);
+  return [scale, set] as const;
 }
 
 // Hook for workspace-specific panel state

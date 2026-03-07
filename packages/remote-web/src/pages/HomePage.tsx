@@ -1,4 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import type { Project } from "shared/remote-types";
 import type { OrganizationWithRole } from "shared/types";
@@ -8,11 +14,27 @@ import { SettingsDialog } from "@/shared/dialogs/settings/SettingsDialog";
 import { useOrganizationStore } from "@/shared/stores/useOrganizationStore";
 import { useUserOrganizations } from "@/shared/hooks/useUserOrganizations";
 import { REMOTE_SETTINGS_SECTIONS } from "@remote/shared/constants/settings";
+import { useAuth } from "@/shared/hooks/auth/useAuth";
+import { useIsMobile } from "@/shared/hooks/useIsMobile";
+import {
+  resolveRelayNavigationHostId,
+  useRelayAppBarHosts,
+} from "@remote/shared/hooks/useRelayAppBarHosts";
 
 type OrganizationWithProjects = {
   organization: OrganizationWithRole;
   projects: Project[];
 };
+
+function getHostInitials(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "??";
+  const words = trimmed.split(/\s+/);
+  if (words.length >= 2) {
+    return (words[0][0] + words[1][0]).toUpperCase();
+  }
+  return trimmed.slice(0, 2).toUpperCase();
+}
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -27,6 +49,21 @@ export default function HomePage() {
   const [items, setItems] = useState<OrganizationWithProjects[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isSignedIn } = useAuth();
+  const { hosts } = useRelayAppBarHosts(isSignedIn);
+  const isMobile = useIsMobile();
+  const preferredHostId = useMemo(
+    () => resolveRelayNavigationHostId(hosts),
+    [hosts],
+  );
+
+  const openRelaySettings = useCallback((hostId?: string) => {
+    void SettingsDialog.show({
+      initialSection: "relay",
+      ...(hostId ? { initialState: { hostId } } : {}),
+      sections: REMOTE_SETTINGS_SECTIONS,
+    });
+  }, []);
 
   useEffect(() => {
     const legacyOrgId = search.legacyOrgSettingsOrgId;
@@ -147,7 +184,83 @@ export default function HomePage() {
 
   return (
     <div className="h-full overflow-auto">
-      <div className="mx-auto w-full max-w-6xl px-double py-double">
+      <div className="mx-auto w-full max-w-6xl px-base py-base sm:px-double sm:py-double">
+        {isMobile && isSignedIn && (
+          <section className="mb-double">
+            <h2 className="text-lg font-semibold text-high">Your Hosts</h2>
+            {hosts.length === 0 ? (
+              <div className="mt-base rounded-sm border border-border bg-secondary p-base text-center">
+                <p className="text-sm text-low">No hosts linked yet</p>
+                <button
+                  type="button"
+                  className="mt-base rounded-sm border border-border bg-primary px-base py-half text-sm font-medium text-normal hover:border-brand/60 hover:text-high"
+                  onClick={() => {
+                    openRelaySettings();
+                  }}
+                >
+                  Link a host
+                </button>
+              </div>
+            ) : (
+              <div className="mt-base space-y-half">
+                {hosts.map((host) => {
+                  const isOnline = host.status === "online";
+                  const isUnpaired = host.status === "unpaired";
+                  const isClickable = isOnline || isUnpaired;
+
+                  return (
+                    <button
+                      key={host.id}
+                      type="button"
+                      disabled={!isClickable}
+                      className={`flex w-full items-center gap-base rounded-sm border border-border bg-primary px-base py-base text-left transition-colors ${
+                        isClickable
+                          ? "hover:border-high/20 hover:bg-panel"
+                          : "opacity-50"
+                      }`}
+                      onClick={() => {
+                        if (isOnline) {
+                          navigate({
+                            to: "/hosts/$hostId/workspaces",
+                            params: { hostId: host.id },
+                          });
+                        } else if (isUnpaired) {
+                          openRelaySettings(host.id);
+                        }
+                      }}
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand/15 text-xs font-semibold text-brand">
+                        {getHostInitials(host.name)}
+                      </div>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-high">
+                        {host.name}
+                      </span>
+                      <span
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                          isOnline
+                            ? "bg-success"
+                            : isUnpaired
+                              ? "border border-warning bg-white"
+                              : "bg-low"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-center rounded-sm border border-dashed border-border px-base py-half text-sm text-low hover:border-brand/60 hover:text-normal"
+                  onClick={() => {
+                    openRelaySettings();
+                  }}
+                >
+                  Link a host
+                </button>
+              </div>
+            )}
+          </section>
+        )}
+
         <header className="space-y-half">
           <h1 className="text-2xl font-semibold text-high">Organizations</h1>
           <p className="text-sm text-low">
@@ -159,7 +272,7 @@ export default function HomePage() {
         </header>
 
         {organizationCount === 0 ? (
-          <section className="mt-double rounded-sm border border-border bg-secondary p-double">
+          <section className="mt-double rounded-sm border border-border bg-secondary p-base sm:p-double">
             <h2 className="text-base font-medium text-high">
               No organizations found
             </h2>
@@ -174,6 +287,8 @@ export default function HomePage() {
                 key={organization.id}
                 organization={organization}
                 projects={projects}
+                hostId={preferredHostId}
+                onRequireHost={openRelaySettings}
               />
             ))}
           </div>
@@ -196,7 +311,12 @@ function CenteredCard({ children }: { children: ReactNode }) {
 function OrganizationSection({
   organization,
   projects,
-}: OrganizationWithProjects) {
+  hostId,
+  onRequireHost,
+}: OrganizationWithProjects & {
+  hostId: string | null;
+  onRequireHost: () => void;
+}) {
   return (
     <section className="space-y-base">
       <header className="flex items-center justify-between gap-base">
@@ -216,7 +336,11 @@ function OrganizationSection({
         <ul className="grid gap-base sm:grid-cols-2">
           {projects.map((project) => (
             <li key={project.id}>
-              <ProjectCard project={project} />
+              <ProjectCard
+                project={project}
+                hostId={hostId}
+                onRequireHost={onRequireHost}
+              />
             </li>
           ))}
           {projects.length % 2 === 1 ? (
@@ -230,8 +354,29 @@ function OrganizationSection({
   );
 }
 
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({
+  project,
+  hostId,
+  onRequireHost,
+}: {
+  project: Project;
+  hostId: string | null;
+  onRequireHost: () => void;
+}) {
   const setSelectedOrgId = useOrganizationStore((s) => s.setSelectedOrgId);
+
+  if (!hostId) {
+    return (
+      <button
+        type="button"
+        className="group flex h-[61px] w-full flex-col justify-center rounded-sm border border-border bg-primary px-base py-base text-left hover:border-brand/60 hover:bg-panel"
+        onClick={onRequireHost}
+      >
+        <p className="text-sm font-medium text-high">{project.name}</p>
+        <p className="mt-half text-xs text-low">Link a host to open project</p>
+      </button>
+    );
+  }
 
   return (
     <Link
