@@ -199,7 +199,7 @@ checksum = "7f202df86484c868dbad7eaa557ef785d5c66295e41b460ef922eca0723b842c"
 
 [[package]]
 name = "api-types"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "chrono",
  "schemars 1.2.1",
@@ -439,19 +439,20 @@ checksum = "c08606f8c3cbf4ce6ec8e28fb0014a2c086708fe954eaa885384a6165172e7e8"
 
 [[package]]
 name = "aws-lc-rs"
-version = "1.16.1"
+version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "94bffc006df10ac2a68c83692d734a465f8ee6c5b384d8545a636f81d858f4bf"
+checksum = "d9a7b350e3bb1767102698302bc37256cbd48422809984b98d292c40e2579aa9"
 dependencies = [
  "aws-lc-sys",
+ "untrusted 0.7.1",
  "zeroize",
 ]
 
 [[package]]
 name = "aws-lc-sys"
-version = "0.38.0"
+version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4321e568ed89bb5a7d291a7f37997c2c0df89809d7b6d12062c81ddb54aa782e"
+checksum = "5c34dda4df7017c8db52132f0f8a2e0f8161649d15723ed63fc00c82d0f2081a"
 dependencies = [
  "cc",
  "cmake",
@@ -1598,7 +1599,7 @@ checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
 
 [[package]]
 name = "db"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1640,7 +1641,7 @@ dependencies = [
 
 [[package]]
 name = "deployment"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2267,7 +2268,7 @@ dependencies = [
 
 [[package]]
 name = "executors"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "agent-client-protocol",
  "async-stream",
@@ -2888,7 +2889,7 @@ dependencies = [
 
 [[package]]
 name = "git"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "chrono",
  "dirs 5.0.1",
@@ -2903,7 +2904,7 @@ dependencies = [
 
 [[package]]
 name = "git-host"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "async-trait",
  "backon",
@@ -4123,7 +4124,7 @@ checksum = "6373607a59f0be73a39b6fe456b8192fcc3585f602af20751600e974dd455e77"
 
 [[package]]
 name = "local-deployment"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "anyhow",
  "api-types",
@@ -4311,7 +4312,7 @@ checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
 name = "mcp"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "anyhow",
  "api-types",
@@ -6027,7 +6028,7 @@ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
 name = "relay-control"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -6140,7 +6141,7 @@ dependencies = [
 
 [[package]]
 name = "review"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "anyhow",
  "clap",
@@ -6183,7 +6184,7 @@ dependencies = [
  "cfg-if",
  "getrandom 0.2.17",
  "libc",
- "untrusted",
+ "untrusted 0.9.0",
  "windows-sys 0.52.0",
 ]
 
@@ -6424,7 +6425,7 @@ dependencies = [
  "aws-lc-rs",
  "ring",
  "rustls-pki-types",
- "untrusted",
+ "untrusted 0.9.0",
 ]
 
 [[package]]
@@ -6998,10 +6999,12 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "anyhow",
  "api-types",
+ "aws-lc-rs",
+ "aws-lc-sys",
  "axum",
  "base64 0.22.1",
  "chrono",
@@ -7050,14 +7053,14 @@ dependencies = [
 
 [[package]]
 name = "server-info"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "tokio",
 ]
 
 [[package]]
 name = "services"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "anyhow",
  "api-types",
@@ -8871,7 +8874,7 @@ dependencies = [
 
 [[package]]
 name = "trusted-key-auth"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "base64 0.22.1",
  "ed25519-dalek",
@@ -9120,6 +9123,12 @@ checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
 
 [[package]]
 name = "untrusted"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
+
+[[package]]
+name = "untrusted"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ecb6da28b8a351d773b68d5825ac39017e680750f980f3a1a85cd8dd28a47c1"
@@ -9197,7 +9206,7 @@ checksum = "06abde3611657adf66d383f00b093d7faecc7fa57071cce2578660c9f1010821"
 
 [[package]]
 name = "utils"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "axum",
  "bytes",
@@ -9271,7 +9280,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vibe-kanban-tauri"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "async-trait",
  "objc2-web-kit",
@@ -10280,7 +10289,7 @@ dependencies = [
 
 [[package]]
 name = "workspace-manager"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "db",
  "git",
@@ -10295,7 +10304,7 @@ dependencies = [
 
 [[package]]
 name = "worktree-manager"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "dunce",
  "git",
