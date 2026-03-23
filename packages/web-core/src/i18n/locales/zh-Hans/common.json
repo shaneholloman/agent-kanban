@@ -27,12 +27,7 @@
     "selectOption": "选择一个选项..."
   },
   "states": {
-    "loading": "加载中...",
-    "loadingHistory": "加载历史记录",
-    "saving": "保存中...",
-    "error": "错误",
-    "success": "成功",
-    "reconnecting": "重新连接中"
+    "loading": "加载中..."
   },
   "language": {
     "browserDefault": "浏览器默认"
@@ -513,6 +508,13 @@
     "agent": "代理",
     "default": "默认",
     "model": "模型"
+  },
+  "crashScreen": {
+    "title": "出了点问题",
+    "description": "应用程序遇到了意外错误。",
+    "reload": "重新加载",
+    "showDetails": "显示详情",
+    "hideDetails": "隐藏详情"
   },
   "syncError": {
     "networkErrors": "网络错误",

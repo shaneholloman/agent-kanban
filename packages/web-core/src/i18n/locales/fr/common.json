@@ -27,12 +27,7 @@
     "selectOption": "Sélectionner une option..."
   },
   "states": {
-    "loading": "Chargement...",
-    "loadingHistory": "Chargement de l'historique",
-    "saving": "Enregistrement...",
-    "error": "Erreur",
-    "success": "Succès",
-    "reconnecting": "Reconnexion"
+    "loading": "Chargement..."
   },
   "language": {
     "browserDefault": "Par défaut du navigateur"
@@ -513,6 +508,13 @@
     "agent": "Agent",
     "default": "Par défaut",
     "model": "Modèle"
+  },
+  "crashScreen": {
+    "title": "Une erreur est survenue",
+    "description": "L'application a rencontré une erreur inattendue.",
+    "reload": "Recharger",
+    "showDetails": "Afficher les détails",
+    "hideDetails": "Masquer les détails"
   },
   "syncError": {
     "networkErrors": "Erreurs réseau",
